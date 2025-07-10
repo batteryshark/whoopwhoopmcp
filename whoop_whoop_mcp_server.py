@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Literal, Optional
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from pydantic import BaseModel, Field
 
 # Import our core detection functionality
@@ -112,7 +112,7 @@ Remember: Better safe than sorry! 🚨""",
 # ============================================================================
 
 @whoop_whoop_mcp.tool
-def investigate_prompt(investigation: PromptInvestigationInput) -> PromptPoliceReport:
+async def investigate_prompt(investigation: PromptInvestigationInput, ctx: Context) -> PromptPoliceReport:
     """
     🔍 Investigate suspicious text for prompt injection attempts.
     
@@ -122,11 +122,16 @@ def investigate_prompt(investigation: PromptInvestigationInput) -> PromptPoliceR
     
     Args:
         investigation: Details of the text to investigate and analysis preferences
+        ctx: FastMCP context for progress reporting and logging
         
     Returns:
         PromptPoliceReport: Official police report with findings and recommendations
     """
     start_time = time.perf_counter()
+    
+    # Stage 1: Initial setup and validation (0-20%)
+    await ctx.info("🚨 Prompt Police investigation initiated")
+    await ctx.report_progress(progress=10, total=100)
     
     # Determine detection threshold based on security level
     thresholds = {
@@ -136,11 +141,37 @@ def investigate_prompt(investigation: PromptInvestigationInput) -> PromptPoliceR
     }
     threshold = thresholds[investigation.security_level]
     
+    await ctx.info(f"Security level: {investigation.security_level.upper()} (threshold: {threshold})")
+    await ctx.report_progress(progress=20, total=100)
+    
+    # Stage 2: Text preprocessing and analysis (20-60%)
+    await ctx.info("Preprocessing text for AI detection model...")
+    await ctx.report_progress(progress=30, total=100)
+    
+    text_length = len(investigation.suspicious_text)
+    await ctx.debug(f"Input text length: {text_length} characters")
+    
+    # Simulate preprocessing steps with progress updates
+    await asyncio.sleep(0.1)  # Small delay to show progress
+    await ctx.report_progress(progress=40, total=100)
+    
+    await ctx.info("Loading AI detection model...")
+    await ctx.report_progress(progress=50, total=100)
+    
+    # Stage 3: Core detection (60-80%)
+    await ctx.info("Running prompt injection detection analysis...")
+    await ctx.report_progress(progress=60, total=100)
+    
     # Run the core detection
     detection_result = detect_prompt_injection(
         investigation.suspicious_text,
         threshold=threshold
     )
+    
+    await ctx.report_progress(progress=80, total=100)
+    
+    # Stage 4: Post-processing and analysis (80-100%)
+    await ctx.info("Analyzing detection results...")
     
     # Calculate processing time
     processing_time = (time.perf_counter() - start_time) * 1000
@@ -150,14 +181,20 @@ def investigate_prompt(investigation: PromptInvestigationInput) -> PromptPoliceR
         confidence = detection_result["confidence"]
         if confidence >= 0.8:
             case_status = "detained"
+            await ctx.warning(f"HIGH THREAT DETECTED - Confidence: {confidence:.1%}")
         else:
             case_status = "suspicious"
+            await ctx.warning(f"Suspicious activity detected - Confidence: {confidence:.1%}")
     else:
         case_status = "cleared"
+        await ctx.info("No threats detected - input appears safe")
+    
+    await ctx.report_progress(progress=90, total=100)
     
     # Generate threat analysis if requested
     threat_analysis = None
     if investigation.include_analysis and detection_result["is_injection"]:
+        await ctx.info("Generating detailed threat analysis...")
         threat_analysis = _generate_threat_analysis(
             investigation.suspicious_text,
             detection_result["confidence"]
@@ -176,6 +213,10 @@ def investigate_prompt(investigation: PromptInvestigationInput) -> PromptPoliceR
             f"✅ ALL CLEAR: No prompt injection detected. "
             f"Input appears safe for processing. Carry on, citizen!"
         )
+    
+    # Final completion
+    await ctx.report_progress(progress=100, total=100)
+    await ctx.info(f"Investigation complete - Processing time: {processing_time:.1f}ms")
     
     return PromptPoliceReport(
         is_suspicious=detection_result["is_injection"],
