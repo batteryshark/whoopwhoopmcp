@@ -329,6 +329,7 @@ async def interactive_demo():
     print("Commands: 'stats' for security stats, 'help' for guidelines")
     print("-" * 50)
     
+    test_suite = PromptPoliceTestSuite()
     async with Client(whoop_whoop_mcp) as client:
         while True:
             try:
@@ -340,7 +341,7 @@ async def interactive_demo():
                 
                 if user_input.lower() == 'stats':
                     result = await client.call_tool("get_security_stats", {})
-                    stats = json.loads(result[0].text)
+                    stats = test_suite.parse_tool_result(result)
                     print("\n📊 SECURITY STATISTICS:")
                     for key, value in stats.items():
                         print(f"  {key}: {value}")
@@ -364,25 +365,25 @@ async def interactive_demo():
                     }
                 })
                 
-                response = json.loads(result[0].text)
+                response = test_suite.parse_tool_result(result)
                 
-                print(f"\n📋 POLICE REPORT - Badge #{response['officer_badge']}")
-                print(f"Status: {response['case_status'].upper()}")
-                print(f"Threat Level: {response.get('threat_analysis', {}).get('threat_level', 'N/A').upper()}")
-                print(f"Confidence: {response['confidence_score']:.1%}")
-                print(f"Processing Time: {response['processing_time_ms']:.1f}ms")
-                print(f"\n💬 Summary: {response['summary']}")
+                print(f"\n📋 POLICE REPORT - Badge #{response.officer_badge}")
+                print(f"Status: {response.case_status.upper()}")
+                print(f"Threat Level: {getattr(response.threat_analysis, 'threat_level', 'N/A').upper() if response.threat_analysis else 'N/A'}")
+                print(f"Confidence: {response.confidence_score:.1%}")
+                print(f"Processing Time: {response.processing_time_ms:.1f}ms")
+                print(f"\n💬 Summary: {response.summary}")
                 
-                if response.get('threat_analysis'):
-                    analysis = response['threat_analysis']
-                    if analysis.get('patterns_detected'):
+                if response.threat_analysis:
+                    analysis = response.threat_analysis
+                    if analysis.patterns_detected:
                         print(f"\n🚨 Patterns Detected:")
-                        for pattern in analysis['patterns_detected']:
+                        for pattern in analysis.patterns_detected:
                             print(f"  • {pattern}")
                     
-                    if analysis.get('mitigation_strategies'):
+                    if analysis.mitigation_strategies:
                         print(f"\n🛡️ Recommendations:")
-                        for strategy in analysis['mitigation_strategies']:
+                        for strategy in analysis.mitigation_strategies:
                             print(f"  • {strategy}")
                 
             except KeyboardInterrupt:
@@ -390,6 +391,8 @@ async def interactive_demo():
                 break
             except Exception as e:
                 print(f"❌ Error: {e}")
+                import traceback
+                traceback.print_exc()
 
 
 # ============================================================================
